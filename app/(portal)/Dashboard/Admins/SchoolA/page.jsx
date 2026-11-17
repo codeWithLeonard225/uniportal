@@ -32,6 +32,7 @@ import Results from "../../../Students/Results/page";
 import GradingScale from "../../../Exams/GradingScale/page";
 import UploadGrades from "../../../Exams/UploadGrades/page";
 import ExamAnalyticsDashboardPage from "../../../Exams/ExamAnalyticsDashboardPage/page";
+import FeesPayment from "../../../FeesPayment/page";
 
 const ADMIN_NAV = [
   { key: "overview", label: "Dashboard", icon: <MdDashboard size={20} /> },
@@ -102,6 +103,17 @@ const ADMIN_NAV = [
       { key: "StudentAttendanceRecordsPage", label: "Student Report" },
       { key: "ClassTeachingAttendance", label: "Student Teaching Attendance" },
    
+  
+    ]
+  },
+  { 
+    key: "fees", 
+    label: "Fees", 
+    icon: <MdPeople size={20} />,
+    children: [
+         { key: "FeesPayment", label: "Fees Payment" },
+      { key: "TimeTableEntry", label: "Time Table Entry" },
+      { key: "TimeTablereport", label: "Time Table Report" },
   
     ]
   },
@@ -196,6 +208,8 @@ export default function AdminDashboard() {
         return <ClassTeachingAttendance />;
         case "AttendanceAnalyticsDashboard": 
         return <AttendanceAnalyticsDashboard />;
+        case "FeesPayment": 
+        return <FeesPayment />;
   
       case "SubmittedGrades": 
         return <div>SubmittedGrades</div>;
