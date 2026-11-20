@@ -26,7 +26,9 @@ const normalizeEmail = (email) => {
 };
 
 const getAssignedEmail = (docData) => {
-  return normalizeEmail(docData?.email || docData?.gmail || docData?.googleEmail || "");
+  return normalizeEmail(
+    docData?.email || docData?.gmail || docData?.googleEmail || ""
+  );
 };
 
 const collectionsToCheck = [
@@ -117,7 +119,7 @@ const LoginPage = () => {
     return null;
   }, []);
 
-  // STEP 3: Verify Firebase Google email matches the assigned email in the user's DB record
+  // STEP 3: Confirm signed-in Google Gmail matches assigned Gmail in the DB record
   const finalizeSessionAfterGoogleAuth = useCallback(
     async (googleUser, record) => {
       const signedInEmail = normalizeEmail(googleUser?.email);
@@ -165,13 +167,18 @@ const LoginPage = () => {
         if (!instSnap.empty) {
           const instData = instSnap.docs[0].data();
           schoolInfo = {
-            institutionName: instData.institutionName || record.foundUser.institutionName || "",
-            logoUrl: instData.logoUrl || "/images/default.png",
-            institutionAddress: instData.institutionAddress || "Address not found",
-            institutionMotto: instData.institutionMotto || "No motto",
-            institutionContact: instData.institutionContact || "No contact info",
+            institutionName:
+              instData.institutionName || record.foundUser.institutionName || "",
+            logoUrl: instData.logoUrl || instData.logo || "/images/default.png",
+            institutionAddress:
+              instData.institutionAddress || instData.address || "Address not found",
+            institutionMotto:
+              instData.institutionMotto || instData.motto || "No motto",
+            institutionContact:
+              instData.institutionContact || instData.contact || "No contact info",
             email: instData.email || "No email",
-            institutionType: instData.institutionType || "Unknown",
+            institutionType:
+              instData.institutionType || instData.type || "Unknown",
             headName: instData.headName || "N/A",
           };
         }
@@ -262,7 +269,7 @@ const LoginPage = () => {
     let googleUser = null;
 
     try {
-      // 1️⃣ FIRST: Verify ID + Name in your user database collections
+      // 1️⃣ FIRST: Check ID + Name in Firestore collections
       const record = await findUserByIdAndName(trimmedUserID, inputNameNormalized);
 
       if (!record) {
@@ -287,7 +294,7 @@ const LoginPage = () => {
       const googleResult = await signInWithPopup(auth, googleProvider);
       googleUser = googleResult.user;
 
-      // 3️⃣ THIRD: Confirm the authenticated Gmail matches the DB record's assigned Gmail
+      // 3️⃣ THIRD: Check that the signed-in Gmail matches the assigned Gmail in DB
       await finalizeSessionAfterGoogleAuth(googleUser, record);
     } catch (err) {
       console.error("Login error:", err);
@@ -306,6 +313,7 @@ const LoginPage = () => {
           return;
         } catch (redirectErr) {
           console.error("Redirect fallback error:", redirectErr);
+          localStorage.removeItem(PENDING_AUTH_KEY);
           setError("Popup was blocked and redirect failed. Check your browser settings.");
         }
       } else if (err?.code === "auth/popup-closed-by-user") {
@@ -337,7 +345,12 @@ const LoginPage = () => {
         {/* HEADER SECTION */}
         <header className="text-center mb-8">
           <div className="w-16 h-16 bg-slate-900 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-            <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-8 h-8 text-blue-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -346,7 +359,9 @@ const LoginPage = () => {
               />
             </svg>
           </div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">LeoTech Portal</h2>
+          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">
+            LeoTech Portal
+          </h2>
           <p className="text-blue-600 font-bold text-[9px] tracking-widest uppercase">
             Sierra Leone ICT Infrastructure
           </p>
