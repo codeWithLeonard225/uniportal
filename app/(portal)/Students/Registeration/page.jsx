@@ -30,14 +30,21 @@ const STUDY_LEVELS = [
   'Postgraduate / Masters',
 ];
 
-// --- Helper: Generate 6-Character Alphanumeric Student ID ---
-const generateStudentId = () => {
+// --- Helper: Generate Auto Portal ID ---
+const generatePortalId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let result = "STD";
+  let result = "PRT";
   for (let i = 0; i < 5; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+};
+
+// --- Helper: Resolve Display ID (manual studentId if available, else portalId) ---
+const getDisplayStudentId = (student) => {
+  const manualId = student?.studentId?.trim();
+  if (manualId) return manualId;
+  return student?.portalId || student?.legacyStudentId || '';
 };
 
 export default function StudentRegistrationPage() {
@@ -48,7 +55,8 @@ export default function StudentRegistrationPage() {
 
   // --- Initial Form State ---
   const initialFormState = {
-    studentId: generateStudentId(),
+    portalId: generatePortalId(),
+    studentId: '', // Optional manual Student ID
     passportPhotoUrl: '',
     title: 'Mr.',
     fullName: '',
@@ -64,7 +72,7 @@ export default function StudentRegistrationPage() {
     district: '',
     programmeId: '',
     programmeName: '',
-     awardType: '',
+    awardType: '',
     studyLevel: STUDY_LEVELS[0],
     academicYear: '2025/2026',
     enrollmentDate: '',
@@ -99,14 +107,14 @@ export default function StudentRegistrationPage() {
         const progs = pSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setProgrammesList(progs);
 
-       if (progs.length > 0 && !formData.programmeId) {
-  setFormData((prev) => ({
-    ...prev,
-    programmeId: progs[0].id,
-    programmeName: progs[0].programmeName,
-    awardType: progs[0].awardType || 'General',
-  }));
-}
+        if (progs.length > 0 && !formData.programmeId) {
+          setFormData((prev) => ({
+            ...prev,
+            programmeId: progs[0].id,
+            programmeName: progs[0].programmeName,
+            awardType: progs[0].awardType || 'General',
+          }));
+        }
       } catch (err) {
         console.error('Error fetching programmes:', err);
       }
@@ -149,28 +157,28 @@ export default function StudentRegistrationPage() {
 
   // --- Form Handlers ---
   const handleInputChange = (e) => {
-  const { name, value } = e.target;
+    const { name, value } = e.target;
 
-  if (name === 'programmeId') {
-    const selectedProg = programmesList.find(
-      (p) => p.id === value
-    );
+    if (name === 'programmeId') {
+      const selectedProg = programmesList.find(
+        (p) => p.id === value
+      );
 
-    setFormData((prev) => ({
-      ...prev,
-      programmeId: value,
-      programmeName: selectedProg?.programmeName || '',
-      awardType: selectedProg?.awardType || 'General',
-    }));
-  } else {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  }
-};
+      setFormData((prev) => ({
+        ...prev,
+        programmeId: value,
+        programmeName: selectedProg?.programmeName || '',
+        awardType: selectedProg?.awardType || 'General',
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
 
-  // --- Cloudinary Upload Handler (institutionID/studentId/photo) ---
+  // --- Cloudinary Upload Handler (institutionID/portalId/photo) ---
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -190,8 +198,9 @@ export default function StudentRegistrationPage() {
       return;
     }
 
-    if (!formData.studentId.trim()) {
-      setMessage({ type: 'error', text: 'Student ID is required before uploading a photo.' });
+    const folderKey = (formData.portalId || formData.studentId || '').trim();
+    if (!folderKey) {
+      setMessage({ type: 'error', text: 'Portal ID is required before uploading a photo.' });
       return;
     }
 
@@ -200,8 +209,8 @@ export default function StudentRegistrationPage() {
 
     try {
       const sanitizedInstId = currentInstitutionId.replace(/[/\\?%*:|"<>]/g, '_');
-      const sanitizedStudentId = formData.studentId.trim().replace(/[/\\?%*:|"<>]/g, '_');
-      const dynamicFolder = `${sanitizedInstId}/${sanitizedStudentId}/photo`;
+      const sanitizedFolderKey = folderKey.replace(/[/\\?%*:|"<>]/g, '_');
+      const dynamicFolder = `${sanitizedInstId}/${sanitizedFolderKey}/photo`;
 
       const data = new FormData();
       data.append('file', file);
@@ -230,20 +239,21 @@ export default function StudentRegistrationPage() {
     }
   };
 
- const resetForm = () => {
-  const firstProg = programmesList[0];
+  const resetForm = () => {
+    const firstProg = programmesList[0];
 
-  setFormData({
-    ...initialFormState,
-    studentId: generateStudentId(),
-    programmeId: firstProg?.id || '',
-    programmeName: firstProg?.programmeName || '',
-    awardType: firstProg?.awardType || 'General',
-  });
+    setFormData({
+      ...initialFormState,
+      portalId: generatePortalId(),
+      studentId: '',
+      programmeId: firstProg?.id || '',
+      programmeName: firstProg?.programmeName || '',
+      awardType: firstProg?.awardType || 'General',
+    });
 
-  setPhotoPreview(null);
-  setEditingId(null);
-};
+    setPhotoPreview(null);
+    setEditingId(null);
+  };
 
   // --- Submit Handler ---
   const handleSubmit = async (e) => {
@@ -257,8 +267,13 @@ export default function StudentRegistrationPage() {
     setSubmitting(true);
     setMessage({ type: '', text: '' });
 
+    const trimmedPortalId = (formData.portalId || generatePortalId()).trim();
+    const trimmedStudentId = (formData.studentId || '').trim();
+
     const payload = {
       ...formData,
+      portalId: trimmedPortalId,
+      studentId: trimmedStudentId,
       institutionID: currentInstitutionId,
       updatedAt: serverTimestamp(),
     };
@@ -303,9 +318,14 @@ export default function StudentRegistrationPage() {
       return;
     }
 
+    // Backward-compatibility: if an old doc only had studentId and no portalId, preserve it cleanly
+    const resolvedPortalId = student.portalId || student.studentId || generatePortalId();
+    const resolvedManualStudentId = student.portalId ? (student.studentId || '') : '';
+
     setEditingId(student.id);
     setFormData({
-      studentId: student.studentId || generateStudentId(),
+      portalId: resolvedPortalId,
+      studentId: resolvedManualStudentId,
       passportPhotoUrl: student.passportPhotoUrl || '',
       title: student.title || 'Mr.',
       fullName: student.fullName || '',
@@ -374,9 +394,12 @@ export default function StudentRegistrationPage() {
 
   // --- Filtered List for Table ---
   const filteredStudents = studentList.filter((item) => {
+    const displayId = getDisplayStudentId(item);
     const matchesSearch =
       item.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.portalId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.studentId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      displayId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesLevel = filterLevel === 'All' || item.studyLevel === filterLevel;
@@ -455,19 +478,20 @@ export default function StudentRegistrationPage() {
                 />
               </label>
               <span className="text-[10px] text-gray-400 mt-2 text-center">
-                Cloudinary: {currentInstitutionId || 'N/A'} / {formData.studentId}
+                Cloudinary: {currentInstitutionId || 'N/A'} / {formData.portalId}
               </span>
             </div>
 
             {/* Personal Details Inputs */}
             <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Auto-Generated Portal ID */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center justify-between">
-                  <span>Student ID (Auto) <span className="text-red-500">*</span></span>
+                  <span>Portal ID (Auto) <span className="text-red-500">*</span></span>
                   {!editingId && (
                     <button
                       type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, studentId: generateStudentId() }))}
+                      onClick={() => setFormData((prev) => ({ ...prev, portalId: generatePortalId() }))}
                       className="text-[10px] text-blue-600 hover:underline font-mono"
                     >
                       Regenerate
@@ -476,11 +500,26 @@ export default function StudentRegistrationPage() {
                 </label>
                 <input
                   type="text"
-                  name="studentId"
+                  name="portalId"
                   required
                   readOnly
-                  value={formData.studentId}
+                  value={formData.portalId}
                   className="w-full border p-2 rounded text-sm bg-gray-100 font-mono text-gray-700 cursor-not-allowed"
+                />
+              </div>
+
+              {/* Manual Optional Student ID */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Student ID <span className="text-gray-400 font-normal">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  name="studentId"
+                  placeholder="Enter Student ID"
+                  value={formData.studentId}
+                  onChange={handleInputChange}
+                  className="w-full border p-2 rounded text-sm font-mono"
                 />
               </div>
 
@@ -498,7 +537,7 @@ export default function StudentRegistrationPage() {
                 </select>
               </div>
 
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-3">
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   Full Name <span className="text-red-500">*</span>
                 </label>
@@ -577,7 +616,6 @@ export default function StudentRegistrationPage() {
               <input
                 type="tel"
                 name="phone"
-              
                 placeholder="+232..."
                 value={formData.phone}
                 onChange={handleInputChange}
@@ -603,7 +641,6 @@ export default function StudentRegistrationPage() {
               <input
                 type="email"
                 name="email"
-            
                 placeholder="student@institution.edu"
                 value={formData.email}
                 onChange={handleInputChange}
@@ -833,87 +870,93 @@ export default function StudentRegistrationPage() {
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map((student) => (
-                  <tr
-                    key={student.id}
-                    className={`hover:bg-gray-50 transition-colors ${
-                      editingId === student.id ? 'bg-amber-50/60' : ''
-                    }`}
-                  >
-                    <td className="p-3 flex items-center gap-3">
-                      {student.passportPhotoUrl ? (
-                        <img
-                          src={student.passportPhotoUrl}
-                          alt=""
-                          className="w-8 h-8 rounded-full object-cover border"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold text-xs">
-                          {student.fullName ? student.fullName.charAt(0) : 'S'}
-                        </div>
-                      )}
-                      <div>
-                        <div className="font-semibold text-gray-900">
-                          {student.title} {student.fullName}
-                        </div>
-                        <div className="text-[10px] text-gray-500">{student.gender}</div>
-                      </div>
-                    </td>
+                filteredStudents.map((student) => {
+                  const displayId = getDisplayStudentId(student);
 
-                    <td className="p-3 font-mono font-medium text-gray-700">{student.studentId}</td>
-                   <td className="p-3">
-  <div className="font-medium text-gray-800">
-    {student.programmeName || 'General'}
-  </div>
+                  return (
+                    <tr
+                      key={student.id}
+                      className={`hover:bg-gray-50 transition-colors ${
+                        editingId === student.id ? 'bg-amber-50/60' : ''
+                      }`}
+                    >
+                      <td className="p-3 flex items-center gap-3">
+                        {student.passportPhotoUrl ? (
+                          <img
+                            src={student.passportPhotoUrl}
+                            alt=""
+                            className="w-8 h-8 rounded-full object-cover border"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold text-xs">
+                            {student.fullName ? student.fullName.charAt(0) : 'S'}
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-semibold text-gray-900">
+                            {student.title} {student.fullName}
+                          </div>
+                          <div className="text-[10px] text-gray-500">{student.gender}</div>
+                        </div>
+                      </td>
 
-  <div className="text-[10px] text-emerald-600 font-semibold">
-    {student.awardType || 'General'}
-  </div>
-</td>
-                    <td className="p-3">
-                      <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono text-[10px]">
-                        {student.studyLevel}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <div>{student.phone}</div>
-                      <div className="text-[10px] text-gray-500">{student.email}</div>
-                    </td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          student.status === 'Active'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : student.status === 'Graduated'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {student.status || 'Active'}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right space-x-2">
-                      <button
-                        onClick={() => handleEdit(student)}
-                        className="text-blue-600 hover:underline font-medium"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleToggleStatus(student)}
-                        className="text-gray-600 hover:underline font-medium"
-                      >
-                        {student.status === 'Active' ? 'Suspend' : 'Activate'}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(student.id, student.fullName)}
-                        className="text-red-600 hover:underline font-medium"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      <td className="p-3 font-mono font-medium text-gray-700">
+                        {displayId}
+                      </td>
+
+                      <td className="p-3">
+                        <div className="font-medium text-gray-800">
+                          {student.programmeName || 'General'}
+                        </div>
+                        <div className="text-[10px] text-emerald-600 font-semibold">
+                          {student.awardType || 'General'}
+                        </div>
+                      </td>
+
+                      <td className="p-3">
+                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono text-[10px]">
+                          {student.studyLevel}
+                        </span>
+                      </td>
+
+                      <td className="p-3">
+                        <div>{student.phone}</div>
+                        <div className="text-[10px] text-gray-500">{student.email}</div>
+                      </td>
+
+                      <td className="p-3">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStatus(student)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            student.status === 'Active'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {student.status || 'Active'}
+                        </button>
+                      </td>
+
+                      <td className="p-3 text-right space-x-2 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(student)}
+                          className="text-blue-600 hover:underline font-medium"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(student.id, student.fullName)}
+                          className="text-red-600 hover:underline font-medium"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

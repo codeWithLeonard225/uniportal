@@ -1,6 +1,6 @@
 "use client";
 //app/page.jsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/app/lib/firebase";
 import { useRouter } from "next/navigation";
@@ -20,22 +20,16 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const router = useRouter();
-  const { user, setUser, loading: authLoading } = useAuth();
+  const { setUser, loading: authLoading } = useAuth();
 
-  // 🔍 Redirect if already logged in
-  useEffect(() => {
-    if (!authLoading && user) {
-      router.replace(user.navigationRoute || "/");
-    }
-  }, [user, authLoading, router]);
-
- const collectionsToCheck = [
+  const collectionsToCheck = [
     { name: "students", idField: "studentId", nameField: "fullName", role: "student" },
     { name: "staff", idField: "staffId", nameField: "fullName", role: "staff" },
     { name: "Admins", idField: "adminID", nameField: "adminName", role: "admin" },
     { name: "CEOs", idField: "ceoID", nameField: "ceoName", role: "ceo", route: "/developer" },
     { name: "Classes", idField: "classId", nameField: "className", role: "class", route: "/PupilUpdate" },
   ];
+
   const getAdminRoute = (type) => {
     switch (type) {
       case "Gov": return "/Dashboard/Admins/SchoolA";
@@ -47,12 +41,14 @@ const LoginPage = () => {
     }
   };
 
- 
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLoadingLogin(true);
+
+    // Clear any existing session so a fresh login always starts clean
+    localStorage.removeItem("schoolUser");
+    setUser(null);
 
     const trimmedUserID = userID.trim();
     const trimmedUserName = userName.trim();
@@ -85,11 +81,13 @@ const LoginPage = () => {
         const snap = await getDocs(q);
 
         if (!snap.empty) {
-          const matchedDoc = snap.docs.find(doc => normalizeName(doc.data()[nameField]) === inputNameNormalized);
+          const matchedDoc = snap.docs.find(
+            (doc) => normalizeName(doc.data()[nameField]) === inputNameNormalized
+          );
           if (matchedDoc) {
             foundUser = matchedDoc.data();
             userRole = role;
-            
+
             // Support both institutionID and legacy schoolId fields in DB documents
             institutionID = foundUser.institutionID || foundUser.schoolId;
 
@@ -111,7 +109,6 @@ const LoginPage = () => {
       }
 
       if (institutionID) {
-        // ✅ Fixed collection name from "Institutions" to "institutions" to match setup page
         const instSnap = await getDocs(
           query(collection(db, "institutions"), where("institutionID", "==", institutionID))
         );
@@ -132,7 +129,6 @@ const LoginPage = () => {
         }
       }
 
-      // ✅ Flattened userSession so all institution fields are directly accessible on `user` object
       const userSession = {
         role: userRole,
         data: foundUser,
@@ -145,7 +141,6 @@ const LoginPage = () => {
       localStorage.setItem("schoolUser", JSON.stringify(userSession));
       setUser(userSession);
       router.replace(userSession.navigationRoute);
-
     } catch (err) {
       console.error("Login error:", err);
       setError("A system error occurred. Please try again.");
@@ -154,29 +149,42 @@ const LoginPage = () => {
     }
   };
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-400 uppercase tracking-widest animate-pulse">Establishing Secure Connection...</div>;
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center font-bold text-slate-400 uppercase tracking-widest animate-pulse">
+        Establishing Secure Connection...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-200">
-        
         {/* HEADER SECTION */}
         <header className="text-center mb-8">
           <div className="w-16 h-16 bg-slate-900 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
             <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+                d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"
+              />
             </svg>
           </div>
           <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">LeoTech Portal</h2>
-          <p className="text-blue-600 font-bold text-[9px] tracking-widest uppercase">Sierra Leone ICT Infrastructure</p>
+          <p className="text-blue-600 font-bold text-[9px] tracking-widest uppercase">
+            Sierra Leone ICT Infrastructure
+          </p>
         </header>
 
         {/* LOGIN FORM */}
         <form onSubmit={handleLogin} className="space-y-4">
-          
           {/* ID FIELD */}
           <div className="space-y-1 relative">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Verification ID</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">
+              Verification ID
+            </label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -199,7 +207,9 @@ const LoginPage = () => {
 
           {/* NAME FIELD */}
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Registered Name</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">
+              Registered Name
+            </label>
             <input
               type="text"
               value={userName}
