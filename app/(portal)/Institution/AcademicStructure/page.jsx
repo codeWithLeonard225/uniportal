@@ -711,11 +711,18 @@ export default function AcademicStructurePage() {
                       className="w-full border p-2 rounded text-sm bg-white"
                     >
                       <option value="Certificate">Certificate</option>
+                      <option value="B. Ed">B. Ed</option>
+                      <option value="HTC Secondary">HTC Secondary</option>
+                      <option value="HTC Primary">HTC Primary</option>
+                      <option value="TC">TC</option>
                       <option value="Diploma">Diploma</option>
                       <option value="Higher Diploma">Higher Diploma</option>
                       <option value="BSc Degree">BSc Degree</option>
                       <option value="Postgraduate Diploma">
                         Postgraduate Diploma
+                      </option>
+                      <option value="Postgraduate Graduate Diploma in Education">
+                        Postgraduate Graduate Diploma in Education
                       </option>
                       <option value="Master Degree">Master Degree</option>
                     </select>
