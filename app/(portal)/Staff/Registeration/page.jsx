@@ -58,6 +58,8 @@ export default function StaffRegistrationPage() {
     employmentDate: '',
     qualification: "Bachelor's Degree",
     status: 'Active',
+    bankName: '',
+bankAccountNumber: '',
   };
 
   // --- States ---
@@ -83,14 +85,16 @@ export default function StaffRegistrationPage() {
     'Adjunct Lecturer',
   ];
 
-  const ADMIN_DESIGNATIONS = [
-    'Registrar',
-    'Finance Officer',
-    'Secretary',
-    'Admission Officer',
-    'Exam Officer',
-    'ICT Officer',
-  ];
+const ADMIN_DESIGNATIONS = [
+  'Registrar',
+  'Finance Officer',
+  'Secretary',
+  'Admission Officer',
+  'Exam Officer',
+  'ICT Officer',
+  'Supervisor',
+  'Coordinator',
+];
 
   const SUPPORT_DESIGNATIONS = [
     'Office Assistant',
@@ -302,6 +306,8 @@ export default function StaffRegistrationPage() {
       employmentDate: staffMember.employmentDate || '',
       qualification: staffMember.qualification || "Bachelor's Degree",
       status: staffMember.status || 'Active',
+      bankName: staffMember.bankName || '',
+bankAccountNumber: staffMember.bankAccountNumber || '',
     });
     setPhotoPreview(staffMember.passportPhotoUrl || null);
 
@@ -723,6 +729,34 @@ export default function StaffRegistrationPage() {
                 <option value="Retired">Retired</option>
               </select>
             </div>
+
+            <div>
+  <label className="block text-xs font-medium text-gray-700 mb-1">
+    Bank Name
+  </label>
+  <input
+    type="text"
+    name="bankName"
+    value={formData.bankName}
+    onChange={handleInputChange}
+    placeholder="Enter bank name"
+    className="w-full border p-2 rounded text-sm"
+  />
+</div>
+
+<div>
+  <label className="block text-xs font-medium text-gray-700 mb-1">
+    Bank Account Number
+  </label>
+  <input
+    type="text"
+    name="bankAccountNumber"
+    value={formData.bankAccountNumber}
+    onChange={handleInputChange}
+    placeholder="Enter bank account number"
+    className="w-full border p-2 rounded text-sm"
+  />
+</div>
           </div>
         </div>
 
