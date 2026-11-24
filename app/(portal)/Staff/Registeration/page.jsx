@@ -746,14 +746,14 @@ bankAccountNumber: staffMember.bankAccountNumber || '',
 
 <div>
   <label className="block text-xs font-medium text-gray-700 mb-1">
-    Bank Account Number
+    Bban Number
   </label>
   <input
     type="text"
     name="bankAccountNumber"
     value={formData.bankAccountNumber}
     onChange={handleInputChange}
-    placeholder="Enter bank account number"
+    placeholder="Enter Bban number"
     className="w-full border p-2 rounded text-sm"
   />
 </div>
